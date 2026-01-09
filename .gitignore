@@ -38,3 +38,8 @@ out/
 
 ### application ###
 application.yaml
+
+### env ###
+.env
+.env.*
+!.env.example

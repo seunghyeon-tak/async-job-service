@@ -12,6 +12,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+import static com.github.mason.async_job_service.db.enums.JobStatus.*;
+
 @Entity
 @Table(name = "jobs")
 @Getter
@@ -45,4 +47,25 @@ public class Job {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    public void markRunning(LocalDateTime now) {
+        this.status = RUNNING;
+    }
+
+    public void markSuccess() {
+        this.status = SUCCEEDED;
+        this.lastError = null;
+    }
+
+    public void markFailure(String error, int maxRetries, LocalDateTime nextRunAt) {
+        this.retryCount += 1;
+        this.lastError = error;
+
+        if (this.retryCount >= maxRetries) {
+            this.status = FAILED;
+        } else {
+            this.status = PENDING;
+            this.nextRunAt = nextRunAt;
+        }
+    }
 }

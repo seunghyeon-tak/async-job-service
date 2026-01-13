@@ -36,23 +36,27 @@ public class Job {
 
     private int retryCount;  // 실패횟수
 
+    @Column(name = "next_run_at")
     private LocalDateTime nextRunAt;  // 다음 실행 시각
 
     @Column(columnDefinition = "TEXT")
     private String lastError;  // 실패 이유
 
+    @Column(name = "locked_at")
     private LocalDateTime lockedAt;  // 선점 시간
 
-    @Column(length = 100)
+    @Column(name = "lock_owner", length = 100)
     private String lockOwner;  // 선점한 워커 식별자
 
+    @Column(name = "lock_expires_at")
     private LocalDateTime lockExpiresAt;  // 락 만료
 
     @CreatedDate
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public void markRunning(LocalDateTime now, String owner, LocalDateTime expiresAt) {

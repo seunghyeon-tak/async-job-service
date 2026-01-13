@@ -41,6 +41,13 @@ public class Job {
     @Column(columnDefinition = "TEXT")
     private String lastError;  // 실패 이유
 
+    private LocalDateTime lockedAt;  // 선점 시간
+
+    @Column(length = 100)
+    private String lockOwner;  // 선점한 워커 식별자
+
+    private LocalDateTime lockExpiresAt;  // 락 만료
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -48,13 +55,19 @@ public class Job {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    public void markRunning(LocalDateTime now) {
+    public void markRunning(LocalDateTime now, String owner, LocalDateTime expiresAt) {
         this.status = RUNNING;
+        this.lockedAt = now;
+        this.lockOwner = owner;
+        this.lockExpiresAt = expiresAt;
     }
 
     public void markSuccess() {
         this.status = SUCCEEDED;
         this.lastError = null;
+        this.lockedAt = null;
+        this.lockOwner = null;
+        this.lockExpiresAt = null;
     }
 
     public void markFailure(String error, int maxRetries, LocalDateTime nextRunAt) {
@@ -67,5 +80,9 @@ public class Job {
             this.status = PENDING;
             this.nextRunAt = nextRunAt;
         }
+
+        this.lockedAt = null;
+        this.lockOwner = null;
+        this.lockExpiresAt = null;
     }
 }

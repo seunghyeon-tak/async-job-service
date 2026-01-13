@@ -41,6 +41,13 @@ public class Job {
     @Column(columnDefinition = "TEXT")
     private String lastError;  // 실패 이유
 
+    private LocalDateTime lockedAt;  // 선점 시간
+
+    @Column(length = 100)
+    private String lockOwner;  // 선점한 워커 식별자
+
+    private LocalDateTime lockExpiresAt;  // 락 만료
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

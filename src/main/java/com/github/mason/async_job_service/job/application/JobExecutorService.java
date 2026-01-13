@@ -11,15 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static com.github.mason.async_job_service.db.enums.JobStatus.PENDING;
-
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class JobExecutorService {
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_SECONDS = 10;
     private static final int LOCK_EXPIRES_MIN = 5;
+    private static final int BATCH_SIZE = 10;
 
     private final JobRepository jobRepository;
     private final JobExecutor jobExecutor;
@@ -27,21 +25,32 @@ public class JobExecutorService {
 
     public void runBatch() {
         LocalDateTime now = LocalDateTime.now();
-        List<Job> runnableJobs = jobRepository.findRunnableJobs(PENDING, now);
-
-        if (runnableJobs.isEmpty()) return;
-
-        Job job = runnableJobs.get(0);
         String owner = workerIdProvider.getWorkerId();
 
-        job.markRunning(now, owner, now.plusMinutes(LOCK_EXPIRES_MIN));
-        jobRepository.save(job);
+        List<Job> claimed = claimBatch(now, owner);
+
+        for (Job job : claimed) {
+            executeOne(job.getId());
+        }
+
+    }
+
+    @Transactional
+    public List<Job> claimBatch(LocalDateTime now, String owner) {
+        LocalDateTime expiresAt = now.plusMinutes(LOCK_EXPIRES_MIN);
+        jobRepository.claimPendingJobs(now, owner, expiresAt, BATCH_SIZE);
+
+        return jobRepository.findClaimedJobs(owner, now);
+    }
+
+    @Transactional
+    public void executeOne(Long jobId) {
+        Job job = jobRepository.findById(jobId).orElseThrow();
 
         try {
-            jobExecutor.execute(job);
             // 성공했을때
+            jobExecutor.execute(job);
             job.markSuccess();
-
         } catch (Exception e) {
             /***
              * failedAt을 추가한 이유 execute()가 오래 걸렸다가 실패하면
@@ -56,7 +65,5 @@ public class JobExecutorService {
                     failedAt.plusSeconds(RETRY_DELAY_SECONDS)
             );
         }
-
-        jobRepository.save(job);
     }
 }

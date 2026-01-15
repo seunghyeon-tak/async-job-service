@@ -76,6 +76,8 @@ public class JobExecutorService {
                     failedAt.plusSeconds(RETRY_DELAY_SECONDS)
             );
         }
+
+        jobRepository.save(job);
     }
 
     // running 상태에서 머무는 job을 감지해서 자동 실행 가능 상태로 복구하는 로직

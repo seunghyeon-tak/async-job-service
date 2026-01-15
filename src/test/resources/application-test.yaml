@@ -12,3 +12,6 @@ spring:
         format_sql: true
         show_sql: true
     defer-datasource-initialization: true
+  task:
+    scheduling:
+      enabled: false

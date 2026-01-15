@@ -2,6 +2,7 @@ package com.github.mason.async_job_service.db.repository;
 
 import com.github.mason.async_job_service.db.domain.Job;
 import com.github.mason.async_job_service.db.enums.JobStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -24,7 +25,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                 and (j.nextRunAt is null or j.nextRunAt <= :now)
                 order by j.nextRunAt asc
             """)
-    List<Job> findRunnableJobs(JobStatus status, LocalDateTime now);
+    List<Job> findRunnableJobs(@Param("status") JobStatus status, @Param("now") LocalDateTime now);
 
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -61,4 +62,13 @@ public interface JobRepository extends JpaRepository<Job, Long> {
             order by j.id asc
             """)
     List<Job> findClaimedJobs(@Param("owner") String owner, @Param("now") LocalDateTime now);
+
+    @Query("""
+        select j from Job j
+        where j.status = com.github.mason.async_job_service.db.enums.JobStatus.RUNNING
+        and j.lockExpiresAt is not null
+        and j.lockExpiresAt <= :now
+        order by j.lockExpiresAt, j.id asc
+        """)
+    List<Job> findStaleJobs(@Param("now") LocalDateTime now, Pageable pageable);
 }

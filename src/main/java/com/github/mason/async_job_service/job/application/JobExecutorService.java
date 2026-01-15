@@ -5,6 +5,7 @@ import com.github.mason.async_job_service.db.repository.JobRepository;
 import com.github.mason.async_job_service.job.executor.JobExecutor;
 import com.github.mason.async_job_service.job.worker.WorkerIdProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,5 +66,21 @@ public class JobExecutorService {
                     failedAt.plusSeconds(RETRY_DELAY_SECONDS)
             );
         }
+    }
+
+    // running 상태에서 머무는 job을 감지해서 자동 실행 가능 상태로 복구하는 로직
+    public int recoverStaleRunningJobs(LocalDateTime now, int limit) {
+        List<Job> staleJobs = jobRepository.findStaleJobs(
+                now,
+                PageRequest.of(0, limit)
+        );
+
+        for (Job job : staleJobs) {
+            job.recoverToPending();
+        }
+
+        jobRepository.saveAll(staleJobs);
+
+        return staleJobs.size();
     }
 }

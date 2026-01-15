@@ -54,10 +54,10 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     );
 
     @Query("""
-            select j from Job j 
+            select j from Job j
             where j.status = com.github.mason.async_job_service.db.enums.JobStatus.RUNNING
             and j.lockOwner = :owner
-            and j.lockedAt = :now
+            and j.lockExpiresAt > :now
             order by j.id asc
             """)
     List<Job> findClaimedJobs(@Param("owner") String owner, @Param("now") LocalDateTime now);

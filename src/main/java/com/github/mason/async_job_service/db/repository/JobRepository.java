@@ -13,11 +13,15 @@ import java.util.List;
 
 public interface JobRepository extends JpaRepository<Job, Long> {
     // 대기열 실행 후보 조회
-    // select * from jobs where status = 'PENDING' and next_run_at <= now() order by next_run_at asc;
+    /*
+    select * from jobs
+    where status = 'PENDING' and (next_run_at is null or next_run_at <= now())
+    order by next_run_at asc;
+    * */
     @Query("""
                 select j from Job j
                 where j.status = :status
-                    and j.nextRunAt <= :now
+                and (j.nextRunAt is null or j.nextRunAt <= :now)
                 order by j.nextRunAt asc
             """)
     List<Job> findRunnableJobs(JobStatus status, LocalDateTime now);
@@ -35,7 +39,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                     select id
                     from jobs
                     where status = 'PENDING'
-                    and next_run_at <= :now
+                    and (next_run_at is null or next_run_at <= :now)
                     and (lock_expires_at is null or lock_expires_at <= :now)
                     order by next_run_at asc, id asc 
                     limit :limit

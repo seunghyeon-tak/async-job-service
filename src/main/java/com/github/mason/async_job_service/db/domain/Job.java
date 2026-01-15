@@ -69,9 +69,8 @@ public class Job {
     public void markSuccess() {
         this.status = SUCCEEDED;
         this.lastError = null;
-        this.lockedAt = null;
-        this.lockOwner = null;
-        this.lockExpiresAt = null;
+        this.nextRunAt = null;
+        clearLock();
     }
 
     public void markFailure(String error, int maxRetries, LocalDateTime nextRunAt) {
@@ -80,11 +79,16 @@ public class Job {
 
         if (this.retryCount >= maxRetries) {
             this.status = FAILED;
+            this.nextRunAt = null;
         } else {
             this.status = PENDING;
             this.nextRunAt = nextRunAt;
         }
 
+        clearLock();
+    }
+
+    private void clearLock() {
         this.lockedAt = null;
         this.lockOwner = null;
         this.lockExpiresAt = null;

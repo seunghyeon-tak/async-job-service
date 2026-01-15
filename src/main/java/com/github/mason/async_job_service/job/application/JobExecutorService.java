@@ -17,8 +17,9 @@ import java.util.List;
 public class JobExecutorService {
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_SECONDS = 10;
-    private static final int LOCK_EXPIRES_MIN = 5;
     private static final int BATCH_SIZE = 10;
+    private static final int RECOVER_LIMIT = 100;
+    private static final int LOCK_TTL_SECONDS = 60;
 
     private final JobRepository jobRepository;
     private final JobExecutor jobExecutor;
@@ -28,9 +29,13 @@ public class JobExecutorService {
         LocalDateTime now = LocalDateTime.now();
         String owner = workerIdProvider.getWorkerId();
 
-        List<Job> claimed = claimBatch(now, owner);
+        recoverStaleRunningJobs(now, RECOVER_LIMIT);
 
-        for (Job job : claimed) {
+        List<Job> claimedJobs = claimBatch(now, owner);
+
+        if (claimedJobs.isEmpty()) return;
+
+        for (Job job : claimedJobs) {
             executeOne(job.getId());
         }
 
@@ -38,8 +43,13 @@ public class JobExecutorService {
 
     @Transactional
     public List<Job> claimBatch(LocalDateTime now, String owner) {
-        LocalDateTime expiresAt = now.plusMinutes(LOCK_EXPIRES_MIN);
-        jobRepository.claimPendingJobs(now, owner, expiresAt, BATCH_SIZE);
+        LocalDateTime expiresAt = now.plusSeconds(LOCK_TTL_SECONDS);
+
+        int claimed = jobRepository.claimPendingJobs(
+                now, owner, expiresAt, BATCH_SIZE
+        );
+
+        if (claimed == 0) return List.of();
 
         return jobRepository.findClaimedJobs(owner, now);
     }
@@ -69,6 +79,7 @@ public class JobExecutorService {
     }
 
     // running 상태에서 머무는 job을 감지해서 자동 실행 가능 상태로 복구하는 로직
+    @Transactional
     public int recoverStaleRunningJobs(LocalDateTime now, int limit) {
         List<Job> staleJobs = jobRepository.findStaleJobs(
                 now,

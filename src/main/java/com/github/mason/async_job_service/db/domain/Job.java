@@ -88,10 +88,10 @@ public class Job {
         clearLock();
     }
 
-    public void recoverToPending() {
+    public void recoverToPending(String reason) {
         this.status = PENDING;
         this.nextRunAt = null;
-        this.lastError = "recovered from stale running";
+        this.lastError = reason;
         clearLock();
     }
 

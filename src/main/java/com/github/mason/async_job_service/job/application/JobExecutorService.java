@@ -75,8 +75,10 @@ public class JobExecutorService {
                 PageRequest.of(0, limit)
         );
 
+        if (staleJobs.isEmpty()) return 0;
+
         for (Job job : staleJobs) {
-            job.recoverToPending();
+            job.recoverToPending("락 만료로 RUNNING 유기 상태 감지 -> PENDING 복구");
         }
 
         jobRepository.saveAll(staleJobs);

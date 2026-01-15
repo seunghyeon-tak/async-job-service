@@ -88,6 +88,13 @@ public class Job {
         clearLock();
     }
 
+    public void recoverToPending() {
+        this.status = PENDING;
+        this.nextRunAt = null;
+        this.lastError = "recovered from stale running";
+        clearLock();
+    }
+
     private void clearLock() {
         this.lockedAt = null;
         this.lockOwner = null;
